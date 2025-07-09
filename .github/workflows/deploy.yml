@@ -11,20 +11,18 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Setup SSH
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Deploy to Server
+    - name: Deploy to EC2
       run: |
-        ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} "
-          git clone https://github.com/Aditya6730/nodejs-github-actions.git app || cd app && git pull
-          cd app
+        ssh -o StrictHostKeyChecking=no ubuntu@YOUR_EC2_IP << 'EOF'
+          cd ~/node-serv || git clone https://github.com/Aditya6730/nodejs-github-actions.git node-serv && cd node-serv
+          git pull origin main
           npm install
-          pm2 restart index.js || pm2 start index.js
-        "
+          pm2 restart index.js || pm2 start index.js --name node-service
+        EOF
